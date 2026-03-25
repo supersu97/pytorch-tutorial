@@ -4,10 +4,10 @@ import torchvision
 import torchvision.transforms as transforms
 
 
-# Device configuration
+# 设备配置
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Hyper-parameters
+# 超参数
 sequence_length = 28
 input_size = 28
 hidden_size = 128
@@ -17,7 +17,7 @@ batch_size = 100
 num_epochs = 2
 learning_rate = 0.01
 
-# MNIST dataset
+# MNIST 数据集
 train_dataset = torchvision.datasets.MNIST(root='../../data/',
                                            train=True, 
                                            transform=transforms.ToTensor(),
@@ -27,7 +27,7 @@ test_dataset = torchvision.datasets.MNIST(root='../../data/',
                                           train=False, 
                                           transform=transforms.ToTensor())
 
-# Data loader
+# 数据加载器
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                            batch_size=batch_size, 
                                            shuffle=True)
@@ -36,7 +36,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           batch_size=batch_size, 
                                           shuffle=False)
 
-# Recurrent neural network (many-to-one)
+# 循环神经网络 (多对一)
 class RNN(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
         super(RNN, self).__init__()
@@ -46,36 +46,36 @@ class RNN(nn.Module):
         self.fc = nn.Linear(hidden_size, num_classes)
     
     def forward(self, x):
-        # Set initial hidden and cell states 
+        # 设置初始隐藏状态和单元状态
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
         c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device)
         
-        # Forward propagate LSTM
-        out, _ = self.lstm(x, (h0, c0))  # out: tensor of shape (batch_size, seq_length, hidden_size)
+        # 前向传播 LSTM
+        out, _ = self.lstm(x, (h0, c0))  # out: 形状为 (batch_size, seq_length, hidden_size) 的张量
         
-        # Decode the hidden state of the last time step
+        # 解码最后一个时间步的隐藏状态
         out = self.fc(out[:, -1, :])
         return out
 
 model = RNN(input_size, hidden_size, num_layers, num_classes).to(device)
 
 
-# Loss and optimizer
+# 损失函数和优化器
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-# Train the model
+# 训练模型
 total_step = len(train_loader)
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):
         images = images.reshape(-1, sequence_length, input_size).to(device)
         labels = labels.to(device)
         
-        # Forward pass
+        # 前向传播
         outputs = model(images)
         loss = criterion(outputs, labels)
         
-        # Backward and optimize
+        # 反向传播和优化
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -84,7 +84,7 @@ for epoch in range(num_epochs):
             print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
                    .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
 
-# Test the model
+# 测试模型
 model.eval()
 with torch.no_grad():
     correct = 0
@@ -99,5 +99,5 @@ with torch.no_grad():
 
     print('Test Accuracy of the model on the 10000 test images: {} %'.format(100 * correct / total)) 
 
-# Save the model checkpoint
+# 保存模型检查点
 torch.save(model.state_dict(), 'model.ckpt')

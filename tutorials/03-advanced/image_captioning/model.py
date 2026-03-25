@@ -6,16 +6,16 @@ from torch.nn.utils.rnn import pack_padded_sequence
 
 class EncoderCNN(nn.Module):
     def __init__(self, embed_size):
-        """Load the pretrained ResNet-152 and replace top fc layer."""
+        """加载预训练的 ResNet-152 并替换顶部的全连接层。"""
         super(EncoderCNN, self).__init__()
         resnet = models.resnet152(pretrained=True)
-        modules = list(resnet.children())[:-1]      # delete the last fc layer.
+        modules = list(resnet.children())[:-1]      # 删除最后一个全连接层
         self.resnet = nn.Sequential(*modules)
         self.linear = nn.Linear(resnet.fc.in_features, embed_size)
         self.bn = nn.BatchNorm1d(embed_size, momentum=0.01)
         
     def forward(self, images):
-        """Extract feature vectors from input images."""
+        """从输入图像中提取特征向量。"""
         with torch.no_grad():
             features = self.resnet(images)
         features = features.reshape(features.size(0), -1)
@@ -25,7 +25,7 @@ class EncoderCNN(nn.Module):
 
 class DecoderRNN(nn.Module):
     def __init__(self, embed_size, hidden_size, vocab_size, num_layers, max_seq_length=20):
-        """Set the hyper-parameters and build the layers."""
+        """设置超参数并构建层。"""
         super(DecoderRNN, self).__init__()
         self.embed = nn.Embedding(vocab_size, embed_size)
         self.lstm = nn.LSTM(embed_size, hidden_size, num_layers, batch_first=True)
@@ -33,7 +33,7 @@ class DecoderRNN(nn.Module):
         self.max_seg_length = max_seq_length
         
     def forward(self, features, captions, lengths):
-        """Decode image feature vectors and generates captions."""
+        """解码图像特征向量并生成字幕。"""
         embeddings = self.embed(captions)
         embeddings = torch.cat((features.unsqueeze(1), embeddings), 1)
         packed = pack_padded_sequence(embeddings, lengths, batch_first=True) 
@@ -42,7 +42,7 @@ class DecoderRNN(nn.Module):
         return outputs
     
     def sample(self, features, states=None):
-        """Generate captions for given image features using greedy search."""
+        """使用贪婪搜索为给定的图像特征生成字幕。"""
         sampled_ids = []
         inputs = features.unsqueeze(1)
         for i in range(self.max_seg_length):

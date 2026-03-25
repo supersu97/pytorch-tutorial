@@ -11,15 +11,15 @@ from pycocotools.coco import COCO
 
 
 class CocoDataset(data.Dataset):
-    """COCO Custom Dataset compatible with torch.utils.data.DataLoader."""
+    """COCO 自定义数据集，与 torch.utils.data.DataLoader 兼容。"""
     def __init__(self, root, json, vocab, transform=None):
-        """Set the path for images, captions and vocabulary wrapper.
+        """设置图像、字幕和词汇表包装器的路径。
         
-        Args:
-            root: image directory.
-            json: coco annotation file path.
-            vocab: vocabulary wrapper.
-            transform: image transformer.
+        参数:
+            root: 图像目录。
+            json: coco 标注文件路径。
+            vocab: 词汇表包装器。
+            transform: 图像转换器。
         """
         self.root = root
         self.coco = COCO(json)
@@ -28,7 +28,7 @@ class CocoDataset(data.Dataset):
         self.transform = transform
 
     def __getitem__(self, index):
-        """Returns one data pair (image and caption)."""
+        """返回一个数据对（图像和字幕）。"""
         coco = self.coco
         vocab = self.vocab
         ann_id = self.ids[index]
@@ -40,7 +40,7 @@ class CocoDataset(data.Dataset):
         if self.transform is not None:
             image = self.transform(image)
 
-        # Convert caption (string) to word ids.
+        # 将字幕（字符串）转换为词 ID。
         tokens = nltk.tokenize.word_tokenize(str(caption).lower())
         caption = []
         caption.append(vocab('<start>'))
@@ -54,29 +54,29 @@ class CocoDataset(data.Dataset):
 
 
 def collate_fn(data):
-    """Creates mini-batch tensors from the list of tuples (image, caption).
+    """从元组列表 (image, caption) 创建 mini-batch 张量。
     
-    We should build custom collate_fn rather than using default collate_fn, 
-    because merging caption (including padding) is not supported in default.
+    我们应该构建自定义的 collate_fn，而不是使用默认的 collate_fn，
+    因为默认的 collate_fn 不支持合并字幕（包括填充）。
 
-    Args:
-        data: list of tuple (image, caption). 
-            - image: torch tensor of shape (3, 256, 256).
-            - caption: torch tensor of shape (?); variable length.
+    参数:
+        data: 元组列表 (image, caption)。
+            - image: 形状为 (3, 256, 256) 的 torch 张量。
+            - caption: 形状为 (?) 的 torch 张量；可变长度。
 
-    Returns:
-        images: torch tensor of shape (batch_size, 3, 256, 256).
-        targets: torch tensor of shape (batch_size, padded_length).
-        lengths: list; valid length for each padded caption.
+    返回:
+        images: 形状为 (batch_size, 3, 256, 256) 的 torch 张量。
+        targets: 形状为 (batch_size, padded_length) 的 torch 张量。
+        lengths: 列表；每个填充字幕的有效长度。
     """
-    # Sort a data list by caption length (descending order).
+    # 按字幕长度（降序）对数据列表进行排序。
     data.sort(key=lambda x: len(x[1]), reverse=True)
     images, captions = zip(*data)
 
-    # Merge images (from tuple of 3D tensor to 4D tensor).
+    # 合并图像（从 3D 张量元组到 4D 张量）。
     images = torch.stack(images, 0)
 
-    # Merge captions (from tuple of 1D tensor to 2D tensor).
+    # 合并字幕（从 1D 张量元组到 2D 张量）。
     lengths = [len(cap) for cap in captions]
     targets = torch.zeros(len(captions), max(lengths)).long()
     for i, cap in enumerate(captions):
@@ -85,18 +85,18 @@ def collate_fn(data):
     return images, targets, lengths
 
 def get_loader(root, json, vocab, transform, batch_size, shuffle, num_workers):
-    """Returns torch.utils.data.DataLoader for custom coco dataset."""
-    # COCO caption dataset
+    """返回用于自定义 coco 数据集的 torch.utils.data.DataLoader。"""
+    # COCO 字幕数据集
     coco = CocoDataset(root=root,
                        json=json,
                        vocab=vocab,
                        transform=transform)
     
-    # Data loader for COCO dataset
-    # This will return (images, captions, lengths) for each iteration.
-    # images: a tensor of shape (batch_size, 3, 224, 224).
-    # captions: a tensor of shape (batch_size, padded_length).
-    # lengths: a list indicating valid length for each caption. length is (batch_size).
+    # COCO 数据集的数据加载器
+    # 每次迭代将返回 (images, captions, lengths)。
+    # images: 形状为 (batch_size, 3, 224, 224) 的张量。
+    # captions: 形状为 (batch_size, padded_length) 的张量。
+    # lengths: 一个列表，表示每个字幕的有效长度。长度为 (batch_size)。
     data_loader = torch.utils.data.DataLoader(dataset=coco, 
                                               batch_size=batch_size,
                                               shuffle=shuffle,

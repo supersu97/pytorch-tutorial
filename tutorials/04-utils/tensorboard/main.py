@@ -5,22 +5,22 @@ from torchvision import transforms
 from logger import Logger
 
 
-# Device configuration
+# 设备配置
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# MNIST dataset 
+# MNIST 数据集 
 dataset = torchvision.datasets.MNIST(root='../../data', 
                                      train=True, 
                                      transform=transforms.ToTensor(),  
                                      download=True)
 
-# Data loader
+# 数据加载器
 data_loader = torch.utils.data.DataLoader(dataset=dataset, 
                                           batch_size=100, 
                                           shuffle=True)
 
 
-# Fully connected neural network with one hidden layer
+# 包含一个隐藏层的全连接神经网络
 class NeuralNet(nn.Module):
     def __init__(self, input_size=784, hidden_size=500, num_classes=10):
         super(NeuralNet, self).__init__()
@@ -38,7 +38,7 @@ model = NeuralNet().to(device)
 
 logger = Logger('./logs')
 
-# Loss and optimizer
+# 损失函数和优化器
 criterion = nn.CrossEntropyLoss()  
 optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)  
 
@@ -46,27 +46,27 @@ data_iter = iter(data_loader)
 iter_per_epoch = len(data_loader)
 total_step = 50000
 
-# Start training
+# 开始训练
 for step in range(total_step):
     
-    # Reset the data_iter
+    # 重置 data_iter
     if (step+1) % iter_per_epoch == 0:
         data_iter = iter(data_loader)
 
-    # Fetch images and labels
+    # 获取图像和标签
     images, labels = next(data_iter)
     images, labels = images.view(images.size(0), -1).to(device), labels.to(device)
     
-    # Forward pass
+    # 前向传播
     outputs = model(images)
     loss = criterion(outputs, labels)
     
-    # Backward and optimize
+    # 反向传播和优化
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
 
-    # Compute accuracy
+    # 计算准确率
     _, argmax = torch.max(outputs, 1)
     accuracy = (labels == argmax.squeeze()).float().mean()
 
@@ -75,22 +75,22 @@ for step in range(total_step):
                .format(step+1, total_step, loss.item(), accuracy.item()))
 
         # ================================================================== #
-        #                        Tensorboard Logging                         #
+        #                           Tensorboard 日志                         #
         # ================================================================== #
 
-        # 1. Log scalar values (scalar summary)
+        # 1. 记录标量值 (标量摘要)
         info = { 'loss': loss.item(), 'accuracy': accuracy.item() }
 
         for tag, value in info.items():
             logger.scalar_summary(tag, value, step+1)
 
-        # 2. Log values and gradients of the parameters (histogram summary)
+        # 2. 记录参数值和梯度 (直方图摘要)
         for tag, value in model.named_parameters():
             tag = tag.replace('.', '/')
             logger.histo_summary(tag, value.data.cpu().numpy(), step+1)
             logger.histo_summary(tag+'/grad', value.grad.data.cpu().numpy(), step+1)
 
-        # 3. Log training images (image summary)
+        # 3. 记录训练图像 (图像摘要)
         info = { 'images': images.view(-1, 28, 28)[:10].cpu().numpy() }
 
         for tag, images in info.items():

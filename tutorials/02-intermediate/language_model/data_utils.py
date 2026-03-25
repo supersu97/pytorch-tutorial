@@ -23,7 +23,7 @@ class Corpus(object):
         self.dictionary = Dictionary()
 
     def get_data(self, path, batch_size=20):
-        # Add words to the dictionary
+        # 向字典中添加词
         with open(path, 'r') as f:
             tokens = 0
             for line in f:
@@ -32,7 +32,7 @@ class Corpus(object):
                 for word in words: 
                     self.dictionary.add_word(word)  
         
-        # Tokenize the file content
+        # 将文件内容分词
         ids = torch.LongTensor(tokens)
         token = 0
         with open(path, 'r') as f:

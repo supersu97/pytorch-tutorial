@@ -9,11 +9,11 @@ import torch.nn as nn
 import numpy as np
 
 
-# Device configuration
+# 设备配置
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def load_image(image_path, transform=None, max_size=None, shape=None):
-    """Load an image and convert it to a torch tensor."""
+    """加载图像并将其转换为 torch 张量。"""
     image = Image.open(image_path)
     
     if max_size:
@@ -32,13 +32,13 @@ def load_image(image_path, transform=None, max_size=None, shape=None):
 
 class VGGNet(nn.Module):
     def __init__(self):
-        """Select conv1_1 ~ conv5_1 activation maps."""
+        """选取 conv1_1 ~ conv5_1 的激活特征图。"""
         super(VGGNet, self).__init__()
         self.select = ['0', '5', '10', '19', '28'] 
         self.vgg = models.vgg19(pretrained=True).features
         
     def forward(self, x):
-        """Extract multiple convolutional feature maps."""
+        """提取多个卷积特征图。"""
         features = []
         for name, layer in self.vgg._modules.items():
             x = layer(x)
@@ -49,20 +49,20 @@ class VGGNet(nn.Module):
 
 def main(config):
     
-    # Image preprocessing
-    # VGGNet was trained on ImageNet where images are normalized by mean=[0.485, 0.456, 0.406] and std=[0.229, 0.224, 0.225].
-    # We use the same normalization statistics here.
+    # 图像预处理
+    # VGGNet 在 ImageNet 上训练时使用了 mean=[0.485, 0.456, 0.406] 和 std=[0.229, 0.224, 0.225] 进行归一化。
+    # 此处使用相同的归一化统计数据。
     transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize(mean=(0.485, 0.456, 0.406), 
                              std=(0.229, 0.224, 0.225))])
     
-    # Load content and style images
-    # Make the style image same size as the content image
+    # 加载内容图像和风格图像
+    # 将风格图像调整为与内容图像相同的大小
     content = load_image(config.content, transform, max_size=config.max_size)
     style = load_image(config.style, transform, shape=[content.size(2), content.size(3)])
     
-    # Initialize a target image with the content image
+    # 用内容图像初始化目标图像
     target = content.clone().requires_grad_(True)
     
     optimizer = torch.optim.Adam([target], lr=config.lr, betas=[0.5, 0.999])
@@ -70,7 +70,7 @@ def main(config):
     
     for step in range(config.total_step):
         
-        # Extract multiple(5) conv feature vectors
+        # 提取多个（5 个）卷积特征向量
         target_features = vgg(target)
         content_features = vgg(content)
         style_features = vgg(style)
@@ -78,22 +78,22 @@ def main(config):
         style_loss = 0
         content_loss = 0
         for f1, f2, f3 in zip(target_features, content_features, style_features):
-            # Compute content loss with target and content images
+            # 计算目标图像与内容图像的内容损失
             content_loss += torch.mean((f1 - f2)**2)
 
-            # Reshape convolutional feature maps
+            # 重塑卷积特征图
             _, c, h, w = f1.size()
             f1 = f1.view(c, h * w)
             f3 = f3.view(c, h * w)
 
-            # Compute gram matrix
+            # 计算 Gram 矩阵
             f1 = torch.mm(f1, f1.t())
             f3 = torch.mm(f3, f3.t())
 
-            # Compute style loss with target and style images
+            # 计算目标图像与风格图像的风格损失
             style_loss += torch.mean((f1 - f3)**2) / (c * h * w) 
         
-        # Compute total loss, backprop and optimize
+        # 计算总损失，反向传播并优化
         loss = content_loss + config.style_weight * style_loss 
         optimizer.zero_grad()
         loss.backward()
@@ -104,7 +104,7 @@ def main(config):
                    .format(step+1, config.total_step, content_loss.item(), style_loss.item()))
 
         if (step+1) % config.sample_step == 0:
-            # Save the generated image
+            # 保存生成的图像
             denorm = transforms.Normalize((-2.12, -2.04, -1.80), (4.37, 4.46, 4.44))
             img = target.clone().squeeze()
             img = denorm(img).clamp_(0, 1)

@@ -4,16 +4,16 @@ import torchvision
 import torchvision.transforms as transforms
 
 
-# Device configuration
+# 设备配置
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
-# Hyper parameters
+# 超参数
 num_epochs = 5
 num_classes = 10
 batch_size = 100
 learning_rate = 0.001
 
-# MNIST dataset
+# MNIST 数据集
 train_dataset = torchvision.datasets.MNIST(root='../../data/',
                                            train=True, 
                                            transform=transforms.ToTensor(),
@@ -23,7 +23,7 @@ test_dataset = torchvision.datasets.MNIST(root='../../data/',
                                           train=False, 
                                           transform=transforms.ToTensor())
 
-# Data loader
+# 数据加载器
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                            batch_size=batch_size, 
                                            shuffle=True)
@@ -32,7 +32,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           batch_size=batch_size, 
                                           shuffle=False)
 
-# Convolutional neural network (two convolutional layers)
+# 卷积神经网络（两个卷积层）
 class ConvNet(nn.Module):
     def __init__(self, num_classes=10):
         super(ConvNet, self).__init__()
@@ -57,22 +57,22 @@ class ConvNet(nn.Module):
 
 model = ConvNet(num_classes).to(device)
 
-# Loss and optimizer
+# 损失函数和优化器
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-# Train the model
+# 训练模型
 total_step = len(train_loader)
 for epoch in range(num_epochs):
     for i, (images, labels) in enumerate(train_loader):
         images = images.to(device)
         labels = labels.to(device)
         
-        # Forward pass
+        # 前向传播
         outputs = model(images)
         loss = criterion(outputs, labels)
         
-        # Backward and optimize
+        # 反向传播和优化
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -81,8 +81,8 @@ for epoch in range(num_epochs):
             print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}' 
                    .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
 
-# Test the model
-model.eval()  # eval mode (batchnorm uses moving mean/variance instead of mini-batch mean/variance)
+# 测试模型
+model.eval()  # 评估模式 (batchnorm 使用移动平均/方差而不是 mini-batch 平均/方差)
 with torch.no_grad():
     correct = 0
     total = 0
@@ -96,5 +96,5 @@ with torch.no_grad():
 
     print('Test Accuracy of the model on the 10000 test images: {} %'.format(100 * correct / total))
 
-# Save the model checkpoint
+# 保存模型检查点
 torch.save(model.state_dict(), 'model.ckpt')

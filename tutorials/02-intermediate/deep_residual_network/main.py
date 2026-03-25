@@ -1,7 +1,7 @@
 # ---------------------------------------------------------------------------- #
-# An implementation of https://arxiv.org/pdf/1512.03385.pdf                    #
-# See section 4.2 for the model architecture on CIFAR-10                       #
-# Some part of the code was referenced from below                              #
+# 对 https://arxiv.org/pdf/1512.03385.pdf 的实现                                 #
+# 模型的 CIFAR-10 架构请参见 4.2 节                                               #
+# 部分代码参考自以下链接                                                           #
 # https://github.com/pytorch/vision/blob/master/torchvision/models/resnet.py   #
 # ---------------------------------------------------------------------------- #
 
@@ -11,22 +11,22 @@ import torchvision
 import torchvision.transforms as transforms
 
 
-# Device configuration
+# 设备配置
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-# Hyper-parameters
+# 超参数
 num_epochs = 80
 batch_size = 100
 learning_rate = 0.001
 
-# Image preprocessing modules
+# 图像预处理模块
 transform = transforms.Compose([
     transforms.Pad(4),
     transforms.RandomHorizontalFlip(),
     transforms.RandomCrop(32),
     transforms.ToTensor()])
 
-# CIFAR-10 dataset
+# CIFAR-10 数据集
 train_dataset = torchvision.datasets.CIFAR10(root='../../data/',
                                              train=True, 
                                              transform=transform,
@@ -36,7 +36,7 @@ test_dataset = torchvision.datasets.CIFAR10(root='../../data/',
                                             train=False, 
                                             transform=transforms.ToTensor())
 
-# Data loader
+# 数据加载器
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                            batch_size=batch_size,
                                            shuffle=True)
@@ -45,12 +45,12 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                           batch_size=batch_size,
                                           shuffle=False)
 
-# 3x3 convolution
+# 3x3 卷积
 def conv3x3(in_channels, out_channels, stride=1):
     return nn.Conv2d(in_channels, out_channels, kernel_size=3, 
                      stride=stride, padding=1, bias=False)
 
-# Residual block
+# 残差块
 class ResidualBlock(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, downsample=None):
         super(ResidualBlock, self).__init__()
@@ -116,16 +116,16 @@ class ResNet(nn.Module):
 model = ResNet(ResidualBlock, [2, 2, 2]).to(device)
 
 
-# Loss and optimizer
+# 损失函数和优化器
 criterion = nn.CrossEntropyLoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-# For updating learning rate
+# 更新学习率
 def update_lr(optimizer, lr):    
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-# Train the model
+# 训练模型
 total_step = len(train_loader)
 curr_lr = learning_rate
 for epoch in range(num_epochs):
@@ -133,11 +133,11 @@ for epoch in range(num_epochs):
         images = images.to(device)
         labels = labels.to(device)
         
-        # Forward pass
+        # 前向传播
         outputs = model(images)
         loss = criterion(outputs, labels)
         
-        # Backward and optimize
+        # 反向传播和优化
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -146,12 +146,12 @@ for epoch in range(num_epochs):
             print ("Epoch [{}/{}], Step [{}/{}] Loss: {:.4f}"
                    .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
 
-    # Decay learning rate
+    # 学习率衰减
     if (epoch+1) % 20 == 0:
         curr_lr /= 3
         update_lr(optimizer, curr_lr)
 
-# Test the model
+# 测试模型
 model.eval()
 with torch.no_grad():
     correct = 0
@@ -166,5 +166,5 @@ with torch.no_grad():
 
     print('Accuracy of the model on the test images: {} %'.format(100 * correct / total))
 
-# Save the model checkpoint
+# 保存模型检查点
 torch.save(model.state_dict(), 'resnet.ckpt')
